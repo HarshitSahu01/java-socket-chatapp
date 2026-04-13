@@ -1,0 +1,16 @@
+# Java
+*.class
+out/
+
+# Environments
+*.env
+# (I'll keep .env files in Git for this specific request as it's a small project, 
+# but usually they are ignored. Actually, I'll ignore them and create examples.)
+
+# IDE
+.idea/
+.project
+.classpath
+.settings/
+*.iml
+bin/
