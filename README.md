@@ -80,36 +80,69 @@ project/
 
 ## 🏗️ Architecture
 
-```
-CLIENT                                SERVER
-┌──────────────┐                     ┌──────────────────┐
-│ ClientDriver │                     │  ServerDriver     │
-│      │       │                     │       │           │
-│      ▼       │                     │       ▼           │
-│  ChatClient  │                     │ AuthProxyServer   │
-│   │  │  │    │                     │  (Proxy Pattern)  │
-│   │  │  │    │                     │       │           │
-│   │  │  ▼    │                     │       ▼           │
-│   │  │ Menu  │     TCP Socket      │   ChatServer      │
-│   │  │Handler│◄═══════════════════▶│       │           │
-│   │  ▼       │   (ObjectStreams)   │       ▼           │
-│   │ Server   │                     │  ┌────────────┐   │
-│   │Connection│                     │  │ThreadPool  │   │
-│   ▼          │                     │  │ ┌────────┐ │   │
-│ Message      │                     │  │ │ClientH. │ │   │
-│ Listener     │                     │  │ │→Command │ │   │
-│ (daemon)     │                     │  │ │→Factory │ │   │
-└──────────────┘                     │  │ │→Execute │ │   │
-                                     │  │ └────────┘ │   │
-                                     │  └────────────┘   │
-                                     │       │           │
-                                     │       ▼           │
-                                     │  ChatRoomManager  │
-                                     │    │              │
-                                     │    ▼              │
-                                     │  ChatRoom         │
-                                     │  (Observer Pattern)│
-                                     └──────────────────┘
+```mermaid
+graph TB
+    subgraph CLIENT_SIDE["🖥️ CLIENT SIDE"]
+        CD[ClientDriver]
+        CC[ChatClient]
+        SC[ServerConnection]
+        ML[MessageListener]
+        MH[MenuHandler]
+        CE[client.env]
+
+        CD -->|creates| CC
+        CC -->|has-a| SC
+        CC -->|has-a| ML
+        CC -->|has-a| MH
+        CD -->|loads| CFG_C[Config Singleton]
+        CFG_C -->|reads| CE
+        ML -->|receives messages| SC
+        ML -->|delegates to| CC
+        MH -->|user actions| CC
+        CC -->|sends messages| SC
+    end
+
+    subgraph COMMON["📦 COMMON SHARED PACKAGE"]
+        MSG[Message]
+        MT[MessageType]
+        PC[ProtocolConstants]
+        CFG[Config]
+    end
+
+    subgraph SERVER_SIDE["🗄️ SERVER SIDE"]
+        SD[ServerDriver]
+        AP[AuthProxyServer]
+        CS[ChatServer]
+        CH[ClientHandler]
+        CRM[ChatRoomManager]
+        CR[ChatRoom]
+        CMF[CommandFactory]
+        CMD[Commands]
+        SE[server.env]
+
+        SD -->|creates| AP
+        AP -->|wraps| CS
+        SD -->|loads| CFG_S[Config Singleton]
+        CFG_S -->|reads| SE
+        CS -->|spawns per client| CH
+        CS -->|has-a| CRM
+        CRM -->|manages many| CR
+        CH -->|delegates to| CMF
+        CMF -->|creates| CMD
+        CMD -->|modifies| CRM
+        CMD -->|modifies| CR
+        CR -->|notifies| CH
+        CH -->|authenticates via| AP
+    end
+
+    SC <-->|"TCP Socket\n(ObjectStreams)"| CS
+
+    CLIENT_SIDE -->|uses| COMMON
+    SERVER_SIDE -->|uses| COMMON
+
+    style CLIENT_SIDE fill:#1a1a2e,stroke:#e94560,stroke-width:2px,color:#eee
+    style SERVER_SIDE fill:#1a1a2e,stroke:#0f3460,stroke-width:2px,color:#eee
+    style COMMON fill:#16213e,stroke:#53d2dc,stroke-width:2px,color:#eee
 ```
 
 **Server:** `ServerDriver` boots `AuthProxyServer` which wraps `ChatServer`. The server accepts connections, assigns each to a `ClientHandler` thread. Incoming messages go through `CommandFactory` → concrete `Command.execute()`. `ChatRoom` broadcasts messages to all observers (`ClientHandler`s).
