@@ -2,24 +2,15 @@ package server;
 
 import common.Message;
 import common.MessageType;
-import server.observer.ChatRoomObserver;
-import server.observer.ChatRoomSubject;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Observer Pattern — Concrete Subject.
- *
- * Represents a chat room. Maintains a list of observers (clients).
- * When a message arrives, it notifies all observers.
- * If notification fails (IOException), the observer is removed.
- */
-public class ChatRoom implements ChatRoomSubject {
+public class ChatRoom {
 
     private final String roomId;
     private final String creator;
-    private final List<ChatRoomObserver> observers;
+    private final List<ClientHandler> observers;
 
     public ChatRoom(String roomId, String creator) {
         this.roomId = roomId;
@@ -27,70 +18,35 @@ public class ChatRoom implements ChatRoomSubject {
         this.observers = new CopyOnWriteArrayList<>();
     }
 
-    @Override
-    public void addObserver(ChatRoomObserver observer) {
-        if (!observers.contains(observer)) {
-            observers.add(observer);
+    public void addObserver(ClientHandler client) {
+        if (!observers.contains(client)) {
+            observers.add(client);
         }
     }
 
-    @Override
-    public void removeObserver(ChatRoomObserver observer) {
-        observers.remove(observer);
+    public void removeObserver(ClientHandler client) {
+        observers.remove(client);
     }
 
-    @Override
     public void notifyObservers(Message msg) {
-        for (ChatRoomObserver observer : observers) {
-            try {
-                observer.onMessage(msg);
-            } catch (Exception e) {
-                // Observer is dead — remove it
-                System.out.println("[ChatRoom " + roomId
-                        + "] Removing dead observer: "
-                        + observer.getObserverName());
-                observers.remove(observer);
-            }
+        for (ClientHandler client : observers) {
+            client.sendMessage(msg);
         }
     }
 
-    /**
-     * Notify all observers that the room is being deleted,
-     * then clear the observer list.
-     */
     public void notifyAndClear(String reason) {
-        Message notice = new Message(MessageType.SYSTEM_MESSAGE,
-                "SERVER", reason);
+        Message notice = new Message(MessageType.SYSTEM_MESSAGE, "SERVER", reason);
         notice.setRoomId(roomId);
         notice.stampTimestamp();
-
-        for (ChatRoomObserver observer : observers) {
-            try {
-                observer.onMessage(notice);
-            } catch (Exception e) {
-                // Ignore — we are clearing anyway
-            }
+        for (ClientHandler client : observers) {
+            client.sendMessage(notice);
         }
         observers.clear();
     }
 
-    public boolean hasObserver(ChatRoomObserver observer) {
-        return observers.contains(observer);
-    }
-
-    public int getObserverCount() {
-        return observers.size();
-    }
-
-    public String getRoomId() {
-        return roomId;
-    }
-
-    public String getCreator() {
-        return creator;
-    }
-
-    public List<ChatRoomObserver> getObservers() {
-        return observers;
-    }
+    public boolean hasObserver(ClientHandler client) { return observers.contains(client); }
+    public int getObserverCount()                    { return observers.size(); }
+    public String getRoomId()                        { return roomId; }
+    public String getCreator()                       { return creator; }
+    public List<ClientHandler> getObservers()        { return observers; }
 }

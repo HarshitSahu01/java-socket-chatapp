@@ -2,12 +2,7 @@ package client;
 
 import java.util.Scanner;
 
-/**
- * Handles all console I/O — menus, prompts, and message display.
- * Separated from ChatClient for Single Responsibility.
- */
 public class MenuHandler {
-
     private final Scanner scanner;
     private final ChatClient chatClient;
 
@@ -16,9 +11,6 @@ public class MenuHandler {
         this.chatClient = chatClient;
     }
 
-    /**
-     * Main loop — show menu and handle user input.
-     */
     public void run() {
         while (chatClient.isRunning()) {
             if (chatClient.isInChatMode()) {
@@ -30,9 +22,6 @@ public class MenuHandler {
         }
     }
 
-    /**
-     * Display the main menu.
-     */
     private void showMainMenu() {
         System.out.println();
         System.out.println("╔══════════════════════════════╗");
@@ -47,9 +36,6 @@ public class MenuHandler {
         System.out.print("Choose an option: ");
     }
 
-    /**
-     * Handle main menu input.
-     */
     private void handleMainMenuInput() {
         String input = readLine();
         if (input == null) return;
@@ -87,13 +73,9 @@ public class MenuHandler {
                 break;
             default:
                 System.out.println("Invalid option. Try again.");
-                break;
         }
     }
 
-    /**
-     * Handle chat mode — user types messages or /leave to exit.
-     */
     private void handleChatMode() {
         String input = readLine();
         if (input == null) return;
@@ -107,17 +89,10 @@ public class MenuHandler {
         }
     }
 
-    /**
-     * Display a message on the console. Synchronized to prevent
-     * interleaving with menu output.
-     */
     public synchronized void displayMessage(String text) {
         System.out.println(text);
     }
 
-    /**
-     * Show chat mode header.
-     */
     public void showChatModeHeader(String roomId) {
         System.out.println();
         System.out.println("╔══════════════════════════════════════╗");
@@ -126,34 +101,17 @@ public class MenuHandler {
         System.out.println("╚══════════════════════════════════════╝");
     }
 
-    /**
-     * Read a line from stdin. Returns null if unavailable.
-     */
     private String readLine() {
         try {
-            if (scanner.hasNextLine()) {
-                return scanner.nextLine();
-            }
-        } catch (Exception e) {
-            // Scanner closed
-        }
+            if (scanner.hasNextLine()) return scanner.nextLine();
+        } catch (Exception e) {}
         return null;
     }
 
-    /**
-     * Small pause to let async responses print before menu re-renders.
-     */
     private void pause() {
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 
-    /**
-     * Pad a string to the right.
-     */
     private String padRight(String s, int n) {
         if (s.length() >= n) return s.substring(0, n);
         return String.format("%-" + n + "s", s);
